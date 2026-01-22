@@ -422,7 +422,7 @@ const App: React.FC = () => {
       setUser({ 
         isLoggedIn: true, 
         email: userData.email,
-        userId: userData.userId,
+        userId: userData.user_id,
         credits: userData.credits,
         name,
         avatar
