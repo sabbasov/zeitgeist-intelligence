@@ -9,8 +9,8 @@ ZEITGEIST is a high-fidelity intelligence engine designed to turn chaotic chat l
 ## ✨ Features
 
 -   **Liquidity Pulse**: Real-time fluid visualization of team communication health.
--   **Action Plans**: AI-driven extraction of high-signal tasks from low-signal noise.
--   **Obsidian UI**: A distraction-free, high-contrast interface designed for focus.
+-   **Neural Analysis**: Powered by Gemini 3 Flash for near-instant signal extraction.
+-   **Executive Dashboard**: Secure identity sync via Google to manage credit liquidity.
 -   **Zero-Retention**: We process the signal, but we never store the noise. Your logs are never saved.
 
 ## 🚀 Quick Start
@@ -18,14 +18,15 @@ ZEITGEIST is a high-fidelity intelligence engine designed to turn chaotic chat l
 ### Prerequisites
 
 -   Node.js 18+
--   Google Gemini API Key (Vertex AI / AI Studio)
+-   Google Gemini API Key
+-   Supabase Project (Database & API)
 
 ### Installation
 
-1.  Clone the repository:
+1.  **Clone the repository:**
 
 ``` bash
-git clone https://github.com/sabbasov/zeitgeist-intelligence.git
+git clone [https://github.com/sabbasov/zeitgeist-intelligence.git](https://github.com/sabbasov/zeitgeist-intelligence.git)
 cd zeitgeist-intelligence
 ```
 
@@ -38,23 +39,15 @@ npm install
 3.  Configure Environment: Create a `.env.local` file in the root directory:
 
 ``` plaintext
-VITE_GEMINI_API_KEY=your_actual_key_here
-VITE_GOOGLE_CLIENT_ID=your_google_id_here
-VITE_API_URL=http://localhost:3001/api
+VITE_GEMINI_API_KEY=your_gemini_key
+VITE_GOOGLE_CLIENT_ID=your_google_client_id
+VITE_SUPABASE_URL=[https://your-project.supabase.co](https://your-project.supabase.co)
+VITE_SUPABASE_ANON_KEY=your_anon_public_key
 ```
 
-4.  Set up the Backend API:
+4.  Database Setup:
 
-``` bash
-cd server
-npm install
-cp env.example .env
-# Edit .env and add your DATABASE_URL (see server/README.md for options)
-npm run migrate
-npm run dev
-```
-
-The API server will run on port 3001. Keep it running while developing.
+Execute the SQL schema (located in the documentation or Supabase SQL Editor) to initialize the `users`, `purchases`, and `credit_transactions` tables. Ensure Row Level Security (RLS) is configured to allow the frontend to interact with these tables.
 
 5.  Launch Development:
 
@@ -64,31 +57,30 @@ In the root directory:
 npm run dev
 ```
 
-The frontend will run on `http://localhost:3000`. Make sure the backend API is running on port 3001 (see step 4 above).
+The frontend will run on `http://localhost:3000`.
 
 ## 🛠️ Tech Stack
 
 -   **Frontend**: React + Vite (TypeScript)
--   **Backend**: Node.js + Express (TypeScript)
--   **Database**: PostgreSQL (Supabase or self-hosted)
--   **Styling**: Tailwind CSS + Custom Liquid Shaders
+-   **Database**: Supabase (PostgreSQL)
+-   **Styling**: Tailwind CSS + Framer Motion (Liquid Shaders)
 -   **Intelligence**: Google Gemini 3 Flash
--   **Infrastructure**: Deployable to any Node.js hosting (Railway, Render, Fly.io, etc.)
+-   **Deployment**: Deployment: Optimized for Vercel
 
 ## 🛡️ Privacy Protocol
 
 ZEITGEIST is built on the principle of Ephemeral Intelligence.
 
--   Data is processed in-memory.
--   Logs are purged immediately after analysis.
--   Only high-level metadata (credit balance and user ID) is persisted.
+-   **In-Memory Processing**: Signal streams are processed in volatile memory and purged instantly upon synthesis.
+-   **Stateless Architecture**: No message data ever touches a persistent database.
+-   **Metadata Only**: Only high-level account data (credit balance and user ID) is persisted in the Supabase registry.
 
 ## 💳 Business Model
 
--   **Trial**: 25 Credits (Free upon first Sign-In)
--   **Starter**: \$19 (100 Credits)
--   **Executive**: \$49 (Unlimited for 30 days)
+-   **Identity Gift**: 25 Credits (Free upon first Sign-In)
+-   **Tactical Pack**: \$19 (100 Credits)
+-   **Executive Node**: \$49 (500 Credits)
 
 ------------------------------------------------------------------------
 
-© 2026 ZEITGEIST INTELLIGENCE. Built for the era of high-speed communication.
+© 2026 ZEITGEIST LABORATORIES. Built for the era of high-speed communication.
