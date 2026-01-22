@@ -40,20 +40,40 @@ npm install
 ``` plaintext
 VITE_GEMINI_API_KEY=your_actual_key_here
 VITE_GOOGLE_CLIENT_ID=your_google_id_here
+VITE_API_URL=http://localhost:3001/api
 ```
 
-4.  Launch Development:
+4.  Set up the Backend API:
+
+``` bash
+cd server
+npm install
+cp env.example .env
+# Edit .env and add your DATABASE_URL (see server/README.md for options)
+npm run migrate
+npm run dev
+```
+
+The API server will run on port 3001. Keep it running while developing.
+
+5.  Launch Development:
+
+In the root directory:
 
 ``` bash
 npm run dev
 ```
 
+The frontend will run on `http://localhost:3000`. Make sure the backend API is running on port 3001 (see step 4 above).
+
 ## 🛠️ Tech Stack
 
 -   **Frontend**: React + Vite (TypeScript)
+-   **Backend**: Node.js + Express (TypeScript)
+-   **Database**: PostgreSQL (Supabase or self-hosted)
 -   **Styling**: Tailwind CSS + Custom Liquid Shaders
--   **Intelligence**: Google Gemini Pro 1.5
--   **Infrastructure**: Vercel + Supabase
+-   **Intelligence**: Google Gemini 3 Flash
+-   **Infrastructure**: Deployable to any Node.js hosting (Railway, Render, Fly.io, etc.)
 
 ## 🛡️ Privacy Protocol
 

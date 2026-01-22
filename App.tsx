@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Zap, 
@@ -17,7 +16,16 @@ import {
 } from 'lucide-react';
 import { analyzeChatLogs } from './geminiService';
 import { AnalysisResult, UserState, Blocker } from './types';
+import { apiService } from './apiService';
 
+// Declare Google global for TypeScript
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
+const GOOGLE_CLIENT_ID = "355007305929-g804tfrh3b9uf8o4gjgtekml3hqcf6l5.apps.googleusercontent.com";
 const INITIAL_FREE_CREDITS = 25;
 const ANALYSIS_COST = 2;
 const STRIPE_BILLING_PORTAL = "https://billing.stripe.com/p/login/cNi6oI05abPU4rU4oKefC00";
@@ -25,19 +33,9 @@ const STRIPE_BILLING_PORTAL = "https://billing.stripe.com/p/login/cNi6oI05abPU4r
 // --- Types ---
 interface ExtendedUserState extends UserState {
   email?: string;
+  avatar?: string;
+  name?: string;
 }
-
-// Simulated persistent storage for accounts
-const getAccountRegistry = (): Record<string, number> => {
-  const saved = localStorage.getItem('zeitgeist_accounts_v14');
-  return saved ? JSON.parse(saved) : {};
-};
-
-const saveToAccountRegistry = (email: string, credits: number) => {
-  const registry = getAccountRegistry();
-  registry[email] = credits;
-  localStorage.setItem('zeitgeist_accounts_v14', JSON.stringify(registry));
-};
 
 // --- Custom Components ---
 
@@ -138,48 +136,100 @@ const GeometricLogo = ({ className = "w-8 h-8", color = "#f4d35e" }) => (
   </svg>
 );
 
-const AuthModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogin: (email: string) => void }> = ({ isOpen, onClose, onLogin }) => {
-  const [isVerifying, setIsVerifying] = useState(false);
+const AuthModal: React.FC<{ 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onLogin: (email: string, name?: string, avatar?: string) => void 
+}> = ({ isOpen, onClose, onLogin }) => {
+  const googleBtnRef = useRef<HTMLDivElement>(null);
 
-  const handleGoogleSignIn = () => {
-    setIsVerifying(true);
-    setTimeout(() => {
-      setIsVerifying(false);
-      onLogin("executive@client-node.com");
-    }, 1200);
-  };
+  useEffect(() => {
+    // Only initialize if the modal is open and the script is loaded
+    if (isOpen && typeof window.google !== 'undefined' && window.google.accounts) {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (response: any) => {
+          try {
+            // Decode JWT payload safely
+            const base64Url = response.credential.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(
+              atob(base64)
+                .split('')
+                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join('')
+            );
+            
+            const payload = JSON.parse(jsonPayload);
+            
+            // Execute the login protocol
+            onLogin(payload.email, payload.name, payload.picture);
+          } catch (error) {
+            console.error("Identity decode failed:", error);
+          }
+        },
+      });
+
+      // We use a small timeout to ensure the DOM ref is ready
+      const renderTimeout = setTimeout(() => {
+        if (googleBtnRef.current && window.google?.accounts?.id) {
+          window.google.accounts.id.renderButton(
+            googleBtnRef.current,
+            { 
+              theme: "filled_blue", 
+              size: "large", 
+              width: "320", 
+              text: "continue_with",
+              shape: "pill",
+            }
+          );
+        }
+      }, 100);
+      
+      return () => clearTimeout(renderTimeout);
+    }
+  }, [isOpen, onLogin]);
 
   return (
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            onClick={onClose} 
+            className="absolute inset-0 bg-black/90 backdrop-blur-md" 
+          />
           <motion.div 
             initial={{ scale: 0.9, opacity: 0, y: 20 }} 
             animate={{ scale: 1, opacity: 1, y: 0 }} 
             exit={{ scale: 0.9, opacity: 0, y: 20 }} 
             className="relative w-full max-w-md bg-[#000000] border border-[#00555a] p-10 rounded-[2.5rem] shadow-[0_0_50px_rgba(244,211,94,0.1)] overflow-hidden"
           >
-            <button onClick={onClose} className="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors"><X size={24} /></button>
+            <button onClick={onClose} className="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors">
+              <X size={24} />
+            </button>
+            
             <div className="flex justify-center mb-8">
               <div className="bg-[#f4d35e] p-5 rounded-[2rem] shadow-[0_0_30px_rgba(244,211,94,0.2)]">
-                {isVerifying ? <Loader2 className="text-black w-10 h-10 animate-spin" /> : <Zap className="text-black w-10 h-10" fill="currentColor" />}
+                <Zap className="text-black w-10 h-10" fill="currentColor" />
               </div>
             </div>
             
             <div className="space-y-6">
-              <h2 className="text-3xl font-grotesk font-black text-center mb-4 uppercase tracking-tighter text-white">IDENTITY PROTOCOL</h2>
-              <p className="text-gray-500 text-center mb-10 font-light leading-relaxed">Secure executive authentication via Google is required to maintain credit liquidity and signal history.</p>
+              <h2 className="text-3xl font-grotesk font-black text-center mb-4 uppercase tracking-tighter text-white">
+                IDENTITY PROTOCOL
+              </h2>
+              <p className="text-gray-500 text-center mb-10 font-light leading-relaxed">
+                Secure executive authentication via Google is required to maintain credit liquidity and signal history.
+              </p>
               
-              <button 
-                onClick={handleGoogleSignIn} 
-                disabled={isVerifying} 
-                className="w-full py-6 bg-[#f4d35e] text-black rounded-[2rem] font-black uppercase tracking-[0.3em] text-[10px] flex items-center justify-center gap-3 hover:bg-white transition-all transform active:scale-95 shadow-2xl"
-              >
-                {isVerifying ? "Securing Handshake..." : "Continue with Google"}
-              </button>
+              <div className="flex justify-center w-full min-h-[50px]">
+                <div ref={googleBtnRef} />
+              </div>
               
-              <p className="text-[9px] text-gray-800 text-center uppercase tracking-[0.2em] leading-relaxed">
+              <p className="text-[9px] text-gray-800 text-center uppercase tracking-[0.2em] leading-relaxed mt-4">
                 ZEITGEIST PRIVACY SHIELD PROTECTED. NO DATA RETENTION ON LOG ANALYSIS.
               </p>
             </div>
@@ -203,8 +253,9 @@ const Header: React.FC<{ user: ExtendedUserState; onSignIn: () => void; onLogout
       </div>
       {user.isLoggedIn ? (
         <div className="flex items-center gap-4">
+          {user.avatar && <img src={user.avatar} className="w-8 h-8 rounded-full border border-[#f4d35e]/30" alt="Avatar" />}
           <div className="flex flex-col items-end">
-            <span className="text-[10px] text-white font-grotesk font-black uppercase tracking-widest">{user.email?.split('@')[0]}</span>
+            <span className="text-[10px] text-white font-grotesk font-black uppercase tracking-widest">{user.name || user.email?.split('@')[0]}</span>
             <span className="text-[8px] text-gray-500 uppercase">Executive Node</span>
           </div>
           <button onClick={onLogout} className="p-2 text-gray-500 hover:text-red-500 transition-colors"><LogOut size={16} /></button>
@@ -298,75 +349,99 @@ const App: React.FC = () => {
   const [hoveredImpact, setHoveredImpact] = useState<number | null>(null);
   
   const [user, setUser] = useState<ExtendedUserState>(() => {
-    const saved = localStorage.getItem('zeitgeist_user_v14');
-    if (saved) return JSON.parse(saved);
     return { credits: INITIAL_FREE_CREDITS, userId: 'guest_' + Math.random().toString(36).substr(2, 9), isLoggedIn: false };
   });
 
   const [showSuccess, setShowSuccess] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-
-  // Sync state to local storage for guest sessions
-  useEffect(() => { localStorage.setItem('zeitgeist_user_v14', JSON.stringify(user)); }, [user]);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Process Stripe Redirect Success & Sync Registry
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('session_id')) {
-      const plan = urlParams.get('plan');
+      const sessionId = urlParams.get('session_id');
+      const plan = urlParams.get('plan') as 'starter' | 'pro' | null;
       const emailFromUrl = urlParams.get('prefilled_email');
-      const added = plan === 'pro' ? 500 : 100;
       
-      setUser(prev => {
-        const effectiveEmail = emailFromUrl || prev.email;
-        const newCredits = prev.credits + added;
+      if (plan && (plan === 'pro' || plan === 'starter')) {
+        const creditsAdded = plan === 'pro' ? 500 : 100;
+        const amountPaidCents = plan === 'pro' ? 4900 : 1900;
         
-        // Ensure credits are saved back to the account registry
-        if (effectiveEmail) {
-          saveToAccountRegistry(effectiveEmail, newCredits);
-        }
-        
-        return { 
-          ...prev, 
-          credits: newCredits,
-          email: effectiveEmail || prev.email,
-          isLoggedIn: !!(effectiveEmail || prev.isLoggedIn)
+        const processPurchase = async () => {
+          try {
+            if (user.isLoggedIn && user.userId && !user.userId.startsWith('guest_')) {
+              await apiService.recordPurchase({
+                userId: user.userId,
+                stripeSessionId: sessionId || undefined,
+                planType: plan,
+                creditsAdded,
+                amountPaidCents,
+              });
+              
+              if (user.email) {
+                const updatedUser = await apiService.getUser(user.email);
+                setUser(prev => ({
+                  ...prev,
+                  ...updatedUser,
+                  email: updatedUser.email,
+                }));
+              }
+            } else if (emailFromUrl) {
+              setUser(prev => ({
+                ...prev,
+                credits: prev.credits + creditsAdded,
+                email: emailFromUrl,
+              }));
+            } else {
+              setUser(prev => ({
+                ...prev,
+                credits: prev.credits + creditsAdded,
+              }));
+            }
+            
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 5000);
+          } catch (error: any) {
+            console.error('Failed to process purchase:', error);
+            setApiError('Failed to process purchase. Credits may not have been added.');
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 5000);
+          }
         };
-      });
-
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 5000);
-      window.history.replaceState({}, '', window.location.pathname);
+        
+        processPurchase();
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     }
-  }, []);
+  }, [user.isLoggedIn, user.userId, user.email]);
 
-  const handleLogin = (email: string) => { 
-    const registry = getAccountRegistry();
-    // 1. Load balance from registry, default to initial if new account
-    const savedCredits = registry[email] ?? INITIAL_FREE_CREDITS;
-    
-    setUser({ 
-      isLoggedIn: true, 
-      email: email,
-      userId: `usr_${btoa(email).substr(0, 12)}`,
-      credits: savedCredits 
-    }); 
-    
-    // 2. Ensure account is initialized in registry
-    saveToAccountRegistry(email, savedCredits);
-    setShowAuthModal(false); 
+  const handleLogin = async (email: string, name?: string, avatar?: string) => { 
+    try {
+      setApiError(null);
+      const userData = await apiService.login(email);
+      
+      setUser({ 
+        isLoggedIn: true, 
+        email: userData.email,
+        userId: userData.userId,
+        credits: userData.credits,
+        name,
+        avatar
+      }); 
+      
+      setShowAuthModal(false);
+    } catch (error: any) {
+      console.error('Login failed:', error);
+      setApiError('Failed to authenticate. Please check your connection.');
+    }
   };
 
   const handleLogout = () => { 
-    // 1. Save current state to registry before clearing
-    if (user.email) {
-      saveToAccountRegistry(user.email, user.credits);
-    }
-    // 2. Reset to guest session
     setUser({ 
       credits: INITIAL_FREE_CREDITS, 
       userId: 'guest_' + Math.random().toString(36).substr(2, 9), 
-      isLoggedIn: false 
+      isLoggedIn: false,
+      email: undefined
     }); 
   };
 
@@ -378,19 +453,26 @@ const App: React.FC = () => {
     }
     if (!logs.trim()) return;
     setLoading(true);
+    setApiError(null);
     try { 
       const data = await analyzeChatLogs(logs); 
       setResult(data); 
-      setUser(prev => {
-        const newCredits = prev.credits - ANALYSIS_COST;
-        // Persist deduction to registry
-        if (prev.email) {
-          saveToAccountRegistry(prev.email, newCredits);
+      
+      if (user.isLoggedIn && user.userId && !user.userId.startsWith('guest_')) {
+        try {
+          const result = await apiService.updateCredits(user.userId, -ANALYSIS_COST, 'analysis');
+          setUser(prev => ({ ...prev, credits: result.credits }));
+        } catch (error: any) {
+          console.error('Failed to update credits:', error);
+          setUser(prev => ({ ...prev, credits: prev.credits - ANALYSIS_COST }));
+          setApiError('Analysis completed but credit update failed.');
         }
-        return { ...prev, credits: newCredits };
-      }); 
+      } else {
+        setUser(prev => ({ ...prev, credits: prev.credits - ANALYSIS_COST }));
+      }
     } 
-    catch (e) { 
+    catch (e: any) { 
+      console.error('Analysis error:', e);
       alert("AI Neural Handshake Timeout. Please retry."); 
     } finally { 
       setLoading(false); 
@@ -401,6 +483,25 @@ const App: React.FC = () => {
     <div className="min-h-screen pb-12 bg-black selection:bg-[#f4d35e] selection:text-black text-white font-sans">
       <Header user={user} onSignIn={() => setShowAuthModal(true)} onLogout={handleLogout} />
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} onLogin={handleLogin} />
+      
+      <AnimatePresence>
+        {apiError && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-24 left-1/2 transform -translate-x-1/2 z-[100] bg-red-900/90 border border-red-500/50 px-6 py-4 rounded-xl backdrop-blur-xl"
+          >
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="text-red-400" size={20} />
+              <p className="text-sm text-red-200">{apiError}</p>
+              <button onClick={() => setApiError(null)} className="text-red-400 hover:text-red-200">
+                <X size={16} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       <AnimatePresence>
         {showSuccess && (
@@ -444,8 +545,7 @@ const App: React.FC = () => {
               <button 
                 onClick={handleAnalyze} 
                 disabled={loading || !logs} 
-                className={`flex items-center gap-2 px-10 py-5 rounded-2xl font-black transition-all transform active:scale-95 uppercase tracking-[0.2em] text-[9px] shadow-2xl ${loading || !logs ? 'bg-gray-950 text-gray-800' : 'bg-[#f4d35e] text-black shadow-[0_0_30px_rgba(244,211,94,0.3)]'}`}
-              >
+                className={`flex items-center gap-2 px-10 py-5 rounded-2xl font-black transition-all transform active:scale-95 uppercase tracking-[0.2em] text-[9px] shadow-2xl ${loading || !logs ? 'bg-gray-950 text-gray-800' : 'bg-[#f4d35e] text-black shadow-[0_0_30px_rgba(244,211,94,0.3)]'}`}>
                 {loading ? <Loader2 className="animate-spin" size={16} /> : <><ChevronRight size={14} /> LIQUIDATE (2 CR)</>}
               </button>
             </div>
