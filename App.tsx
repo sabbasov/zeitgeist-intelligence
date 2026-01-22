@@ -12,7 +12,8 @@ import {
   X,
   Waves,
   LogOut,
-  ArrowRight
+  ArrowRight,
+  Mail
 } from 'lucide-react';
 import { analyzeChatLogs } from './geminiService';
 import { AnalysisResult, UserState, Blocker } from './types';
@@ -49,6 +50,12 @@ const LiquidityEngine: React.FC<{ pulse: string; hoverImpact: number | null }> =
     if (hoverImpact !== null) return 0.35 + (hoverImpact / 100) * 0.9;
     return 0.85;
   }, [hoverImpact]);
+
+  const openLegal = (type: string) => {
+    // For now, this just alerts or logs until you have legal pages
+    console.log(`Opening ${type} protocol...`);
+    alert(`The ${type.toUpperCase()} Protocol is currently being synchronized with global standards. Please check back shortly.`);
+  };
 
   return (
     <motion.div 
@@ -575,19 +582,61 @@ const App: React.FC = () => {
         </section>
       </main>
 
-      <footer className="mt-32 border-t border-[#00555a]/10 pt-24 pb-16 px-8 bg-black">
+      <footer className="mt-48 border-t border-[#00555a]/10 pt-32 pb-20 px-8 bg-black">
         <div className="max-w-7xl mx-auto flex flex-col items-center">
-          <div className="flex flex-col items-center gap-4 mb-16">
-            <GeometricLogo className="w-16 h-16" />
-            <h2 className="text-3xl font-grotesk font-black tracking-tighter uppercase text-white">ZEITGEIST</h2>
-            <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-[#f4d35e] to-transparent opacity-50" />
+          
+          <div className="flex flex-col items-center gap-6 mb-24">
+            <GeometricLogo className="w-20 h-20" />
+            <h2 className="text-5xl font-grotesk font-black tracking-tighter uppercase text-white">ZEITGEIST</h2>
+            <div className="h-[1px] w-32 bg-gradient-to-r from-transparent via-[#f4d35e] to-transparent opacity-50" />
           </div>
-          <div className="flex flex-col items-center gap-6 w-full">
-            <div className="flex items-center gap-4 px-8 py-4 bg-[#001a1a]/40 border border-[#00555a]/20 rounded-2xl max-w-xl text-center">
-              <ShieldCheck className="text-[#f4d35e] shrink-0" size={20} />
-              <p className="text-[11px] text-gray-500 font-light leading-relaxed"><strong className="text-gray-300 italic">Zero-Retention Policy:</strong> Signal streams are ephemeral, processed in volatile memory and purged upon synthesis completion. We liquidate debt without building surveillance.</p>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-16 md:gap-32 mb-24 w-full text-center">
+             <div className="flex flex-col gap-6">
+                <span className="text-[10px] uppercase tracking-[0.5em] font-black text-[#00555a]">Legal Protocol</span>
+                <button onClick={() => openLegal('terms')} className="text-gray-600 text-sm hover:text-[#f4d35e] transition-all font-light tracking-tight">Terms of Use</button>
+                <button onClick={() => openLegal('privacy')} className="text-gray-600 text-sm hover:text-[#f4d35e] transition-all font-light tracking-tight">Privacy Shield</button>
+             </div>
+             <div className="flex flex-col gap-6">
+                <span className="text-[10px] uppercase tracking-[0.5em] font-black text-[#00555a]">Architecture</span>
+                <button onClick={() => openLegal('security')} className="text-gray-600 text-sm hover:text-[#f4d35e] transition-all font-light tracking-tight">Security Standards</button>
+                <a href={STRIPE_BILLING_PORTAL} target="_blank" className="text-gray-600 text-sm hover:text-[#f4d35e] transition-all font-light tracking-tight">Executive Billing</a>
+             </div>
+             <div className="flex flex-col gap-6">
+                <span className="text-[10px] uppercase tracking-[0.5em] font-black text-[#00555a]">Liaison</span>
+                <a href="mailto:support@zeitgeist.codes" className="text-gray-600 text-sm hover:text-[#f4d35e] transition-all font-light tracking-tight flex items-center justify-center gap-2"><Mail size={14} /> Support Desk</a>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText('support@zeitgeist.codes');
+                  }} 
+                  className="text-gray-600 text-[10px] hover:text-[#f4d35e] transition-all font-bold uppercase tracking-widest opacity-40 hover:opacity-100"
+                >
+                  Copy Liaison Address
+                </button>
+             </div>
+             <div className="flex flex-col gap-6">
+                <span className="text-[10px] uppercase tracking-[0.5em] font-black text-[#00555a]">Pulse Status</span>
+                <span className="text-green-500 text-[10px] uppercase tracking-[0.3em] font-black flex items-center justify-center gap-3">
+                   <span className="w-2 h-2 rounded-full bg-green-500 animate-ping" /> Protocols Nominal
+                </span>
+                <span className="text-gray-700 text-[9px] uppercase tracking-[0.4em] font-black">v1.4.0 - Obsidian</span>
+             </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-8 w-full">
+            <div className="flex items-center gap-4 px-10 py-5 bg-[#001a1a]/40 border border-[#00555a]/20 rounded-[2rem] max-w-2xl text-center">
+              <ShieldCheck className="text-[#f4d35e] shrink-0" size={24} />
+              <p className="text-[13px] text-gray-500 font-light leading-relaxed">
+                <strong className="text-gray-300">The Zero-Retention Promise:</strong> We do not store, view, or train on your data. Logs are processed in RAM and purged instantly. We liquidate debt, we don't build it.
+              </p>
             </div>
-            <p className="text-gray-800 text-[9px] uppercase tracking-[0.5em] font-black mt-8">&copy; 2026 ZEITGEIST LABORATORIES. POWERED BY GEMINI NEURAL ARCHITECTURE.</p>
+            
+            <div className="flex flex-col items-center gap-4 mt-12 opacity-40 hover:opacity-100 transition-opacity duration-700">
+              <p className="text-[#f4d35e] text-[11px] tracking-[0.8em] font-black uppercase">
+                Communication Intelligence Architecture
+              </p>
+              <p className="text-gray-800 text-[10px] uppercase tracking-[0.5em] font-black">&copy; 2026 ZEITGEIST LABORATORIES. ALL SIGNAL, NO NOISE.</p>
+            </div>
           </div>
         </div>
       </footer>
