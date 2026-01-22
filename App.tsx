@@ -145,9 +145,9 @@ const AuthModal: React.FC<{
 
   useEffect(() => {
     // Only initialize if the modal is open and the script is loaded
-    if (isOpen && typeof window.google !== 'undefined' && window.google.accounts) {
+    if (isOpen && window.google) {
       window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
         callback: (response: any) => {
           try {
             // Decode JWT payload safely
@@ -171,22 +171,20 @@ const AuthModal: React.FC<{
       });
 
       // We use a small timeout to ensure the DOM ref is ready
-      const renderTimeout = setTimeout(() => {
-        if (googleBtnRef.current && window.google?.accounts?.id) {
+      setTimeout(() => {
+        if (googleBtnRef.current) {
           window.google.accounts.id.renderButton(
             googleBtnRef.current,
             { 
-              theme: "filled_blue", 
+              theme: "filled_blue", // Matches the "Executive" vibe better than outline
               size: "large", 
-              width: "320", 
+              width: "320", // Fixed width to center it properly
               text: "continue_with",
               shape: "pill",
             }
           );
         }
       }, 100);
-      
-      return () => clearTimeout(renderTimeout);
     }
   }, [isOpen, onLogin]);
 
@@ -225,6 +223,7 @@ const AuthModal: React.FC<{
                 Secure executive authentication via Google is required to maintain credit liquidity and signal history.
               </p>
               
+              {/* This is where Google injects the real button */}
               <div className="flex justify-center w-full min-h-[50px]">
                 <div ref={googleBtnRef} />
               </div>
@@ -418,33 +417,21 @@ const App: React.FC = () => {
   const handleLogin = async (email: string, name?: string, avatar?: string) => { 
     try {
       setApiError(null);
+      const userData = await apiService.login(email);
       
-      // --- BYPASS: REMOVE THE apiService.login CALL ---
-      // We are going to "Auto-Authorize" the user since Google already verified them
-      const mockUser = {
-        email: email,
-        userId: 'usr_' + Math.random().toString(36).substr(2, 9),
-        credits: 25 // Default free tier for your launch
-      };
-
-      // Update the app state immediately
       setUser({ 
         isLoggedIn: true, 
-        email: mockUser.email,
-        userId: mockUser.userId,
-        credits: mockUser.credits,
-        name: name || email.split('@')[0],
-        avatar: avatar
+        email: userData.email,
+        userId: userData.userId,
+        credits: userData.credits,
+        name,
+        avatar
       }); 
       
       setShowAuthModal(false);
-      console.log("ZEITGEIST: Identity Protocol Locally Verified.");
-
     } catch (error: any) {
-      console.error('Login error:', error);
-      // This is the error you were seeing. By bypassing the API call above, 
-      // we prevent this block from ever running.
-      setApiError('Identity Handshake Failed. Please try again.');
+      console.error('Login failed:', error);
+      setApiError('Failed to authenticate. Please check your connection.');
     }
   };
 
